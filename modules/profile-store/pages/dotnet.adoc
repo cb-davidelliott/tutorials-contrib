@@ -148,7 +148,7 @@ If you are following the repository pattern in your projects, this is a very sim
 
 * Each Couchbase document has a key (also known as an ID) which is stored _outside_ of the document itself. Therefore:
 * The `Save` method is manually mapping the incoming `User` object in order to avoid storing a copy of the Id _inside_ the document. This is also a safeguard in case the `User` object changes: you may not want to save every value.
-* THe `FindById` method is doing some extra work to popular the `Id` field of the `User` object it is returning.
+* The `FindById` method is doing some extra work to populate the `Id` field of the `User` object it is returning.
 * To keep the tutorial simple, this code is all synchronous. Neither of these methods are doing any retrying or error handling. However, these are all concerns you should be aware of when working with any database, including Couchbase.
 
 One part of the above repository that may not be clear is the constructor and the `IBucket` object. Remember back to the link:https://github.com/couchbaselabs/Couchbase.Extensions/blob/master/docs/dependency-injection.md[Couchbase.Extensions.DependencyInjection package]. That's what's going to be responsible for supplying this class with an `IBucketProvider` instance. Let's go over to Startup.cs, and add a line to the `ConfigureServices` method:
@@ -190,12 +190,12 @@ The code above might look trivial for you, especially if you are coming from the
 * Couchbase is link:https://docs.couchbase.com/server/6.0/learn/buckets-memory-and-storage/vbuckets.html#understanding-vbuckets[automatically sharding the data], and this process is totally transparent for the developer.
 * You can read after write.
 * The document is automaticaly cached.
-* Operations like findById and save use internally the Key-Value Store Engine, which is, from a 10,000 foot view, a big distributed hash map. This kind of structure is fast for reads and writes and as Couchbase already has a totally transparent manage cache internally, you will get a very good performance without any extra effort.
+* Operations like FindById and save use internally the Key-Value Store Engine, which is, from a 10,000 foot view, a big distributed hash map. This kind of structure is fast for reads and writes and as Couchbase already has a totally transparent manage cache internally, you will get a very good performance without any extra effort.
 
 Even though we haven't written a lot of code yet, we already achieved 3 of our initial Non-functional requirements:
 
 ****
-*  *Strong Consistenncy:* - Core operations like Updates/Save/getById are strongly consistent.
+*  *Strong Consistency* - Core operations like Updates/Save/FindById are strongly consistent.
 
 * *High read and write throughput* - Writes are asynchronous, reads by key uses internally the key value store, queries can use Memory Optimized Indexes (MOI)
 
@@ -269,6 +269,8 @@ Couchbase has a SQL-like language called link:https://query-tutorial.couchbase.c
 include::../examples/dotnet/UserProfileExample/UserProfileExample/Models/UserRepository.cs[tag=query]
 ----
 
+\http://localhost:5000/api/listTenantUsers?tenantId=0
+
 As you can see in the code above, you can query the database in two different ways: writing N1QL queries directly against the Couchbase .NET SDK, or by using Linq with Linq2Couchbase.
 
 You can learn more about link:https://github.com/couchbaselabs/Linq2Couchbase[Linq2Couchbase on GitHub] and more about the link:https://docs.couchbase.com/dotnet-sdk/2.7/start-using-sdk.html[Couchbase .NET SDK in documentation].
@@ -286,6 +288,9 @@ This will create an index when looking up the tenantId for user documents.
 
 For `FindActiveUsersByFirstName` it's a little trickier, because the N1QL is generated, but if you link:https://docs.couchbase.com/dotnet-sdk/2.7/collecting-information-and-logging.html[enable logging the .NET SDK], the generated N1QL will be output at the DEBUG level. Here's an index that will improve performance for this query:
 
+Note: You may need to view a document in the bucket, or edit a document to have the appropriate values to satisfy the query. 
+\http://localhost:5000/api/findActiveUsersByFirstName?firstName=David&enabled=false&countryCode=DE
+
 [source,SQL,indent=0]
 ----
 include::../examples/dotnet/UserProfileExample/UserProfileExample/Models/indexes.n1ql[tag=ix_findActiveUsersByFirstName]
@@ -299,7 +304,7 @@ Creating the right indexes can be difficult. If you are having trouble creating 
 Now that you know how to query your user profile store, let's revisit our list of non-functional requirements:
 
 ****
-*  *Strong Consistenncy:* - Core operations like Updates/Save/getById are strong consistent.
+*  *Strong Consistency* - Core operations like Updates/Save/getById are strong consistent.
 
 * *High read and write throughput* - Writes are asynchronous,reads by key uses internally the key value store, queries can use Memory Optimized Indexes (MOI)
 
@@ -418,7 +423,7 @@ Couchbase Full-Text Search should be the primary choice link:https://blog.couchb
 Lastly, let's add a new item to our list of non-functional requirements:
 
 ****
-*  *Strong Consistenncy:* - Core operations like Updates/Save/getById are strong consistent.
+* *Strong Consistency* - Core operations like Updates/Save/getById are strong consistent.
 
 * *High read and write throughput* - Writes are asynchronous,reads by key uses internally the key value store, queries can use Memory Optimized Indexes (MOI)
 
@@ -428,9 +433,12 @@ Lastly, let's add a new item to our list of non-functional requirements:
 
 * *A flexible data model* – No need to specify a schema, no need to change the database when a new column is added.
 
-* *Natural-Language matching*: link:https://docs.couchbase.com/server/6.0/fts/full-text-intro.html[FTS] is a powerful search engine framework which allows you to query natural-language text at scale.
+* *Natural-Language matching* link:https://docs.couchbase.com/server/6.0/fts/full-text-intro.html[FTS] is a powerful search engine framework which allows you to query natural-language text at scale.
 
 ****
+
+Note: You may need to view or edit the documents to get the appropriate values for the query below.
+\http://localhost:5000/api/ftsListActiveUsers?firstName=David&enabled=false&countryCode=DE
 
 == Storing User Events
 
